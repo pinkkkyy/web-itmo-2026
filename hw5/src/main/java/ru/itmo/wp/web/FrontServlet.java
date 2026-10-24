@@ -14,11 +14,14 @@ import java.io.File;
 import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 public class FrontServlet extends HttpServlet {
@@ -43,8 +46,8 @@ public class FrontServlet extends HttpServlet {
                     + templateDir + "]");
         }
         configuration.setDefaultEncoding(StandardCharsets.UTF_8.name());
-        configuration.setTemplateExceptionHandler(debug ? TemplateExceptionHandler.HTML_DEBUG_HANDLER :
-                TemplateExceptionHandler.RETHROW_HANDLER);
+        configuration.setTemplateExceptionHandler(
+                debug ? TemplateExceptionHandler.HTML_DEBUG_HANDLER : TemplateExceptionHandler.RETHROW_HANDLER);
         configuration.setLogTemplateExceptions(false);
         configuration.setWrapUncheckedExceptions(true);
 
@@ -94,15 +97,13 @@ public class FrontServlet extends HttpServlet {
             throw new NotFoundException();
         }
 
-        Method method = null;
-        for (Class<?> clazz = pageClass; method == null && clazz != null; clazz = clazz.getSuperclass()) {
-            try {
-                method = clazz.getDeclaredMethod(route.getAction(), HttpServletRequest.class, Map.class);
-            } catch (NoSuchMethodException ignored) {
-                // No operations.
-            }
-        }
+        Map<String, Object> view = new HashMap<>();
+        Map<Class<?>, Object> available = new HashMap<>();
+        available.put(HttpServletRequest.class, request);
+        available.put(HttpServletResponse.class, response);
+        available.put(Map.class, view);
 
+        Method method = findActionMethod(pageClass, route.getAction(), available);
         if (method == null) {
             throw new NotFoundException();
         }
@@ -111,15 +112,15 @@ public class FrontServlet extends HttpServlet {
         try {
             page = pageClass.getDeclaredConstructor().newInstance();
         } catch (InstantiationException | IllegalAccessException
-                 | NoSuchMethodException | InvocationTargetException e) {
+                | NoSuchMethodException | InvocationTargetException e) {
             throw new ServletException("Can't create page [pageClass="
                     + pageClass + "]");
         }
 
-        Map<String, Object> view = new HashMap<>();
+        Object[] arguments = buildArguments(method, available);
         method.setAccessible(true);
         try {
-            method.invoke(page, request, view);
+            method.invoke(page, arguments);
         } catch (IllegalAccessException e) {
             throw new ServletException("Can't invoke action method [pageClass="
                     + pageClass + ", method=" + method + "]");
@@ -148,6 +149,69 @@ public class FrontServlet extends HttpServlet {
         }
     }
 
+    private static Method findActionMethod(Class<?> pageClass, String name,
+            Map<Class<?>, Object> available) {
+        for (Class<?> clazz = pageClass; clazz != null; clazz = clazz.getSuperclass()) {
+            Method method = findInType(clazz, name, available);
+            if (method != null) {
+                return method;
+            }
+        }
+
+        Set<Class<?>> interfaces = new LinkedHashSet<>();
+        for (Class<?> clazz = pageClass; clazz != null; clazz = clazz.getSuperclass()) {
+            collectInterfaces(clazz, interfaces);
+        }
+        for (Class<?> anInterface : interfaces) {
+            Method method = findInType(anInterface, name, available);
+            if (method != null) {
+                return method;
+            }
+        }
+
+        return null;
+    }
+
+    private static void collectInterfaces(Class<?> type, Set<Class<?>> result) {
+        for (Class<?> anInterface : type.getInterfaces()) {
+            if (result.add(anInterface)) {
+                collectInterfaces(anInterface, result);
+            }
+        }
+    }
+
+    private static Method findInType(Class<?> type, String name, Map<Class<?>, Object> available) {
+        for (Method method : type.getDeclaredMethods()) {
+            if (method.getName().equals(name)
+                    && !method.isBridge()
+                    && !method.isSynthetic()
+                    && !Modifier.isStatic(method.getModifiers())
+                    && !Modifier.isAbstract(method.getModifiers())
+                    && hasSupportedParameters(method, available)) {
+                return method;
+            }
+        }
+        return null;
+    }
+
+    private static boolean hasSupportedParameters(Method method, Map<Class<?>, Object> available) {
+        for (Class<?> type : method.getParameterTypes()) {
+            if (!available.containsKey(type)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private static Object[] buildArguments(Method method, Map<Class<?>, Object> available) {
+        Class<?>[] types = method.getParameterTypes();
+        Object[] arguments = new Object[types.length];
+        for (int i = 0; i < types.length; i++) {
+            arguments[i] = available.get(types[i]);
+        }
+        return arguments;
+    }
+
     private Template newTemplate(String templateName) throws ServletException {
         Template template = null;
 
@@ -155,7 +219,6 @@ public class FrontServlet extends HttpServlet {
             try {
                 template = sourceConfiguration.getTemplate(templateName);
             } catch (TemplateNotFoundException ignored) {
-                // No operations.
             } catch (IOException e) {
                 throw new ServletException("Can't load template [templateName=" + templateName + "]", e);
             }
@@ -165,7 +228,6 @@ public class FrontServlet extends HttpServlet {
             try {
                 template = targetConfiguration.getTemplate(templateName);
             } catch (TemplateNotFoundException ignored) {
-                // No operations.
             } catch (IOException e) {
                 throw new ServletException("Can't load template [templateName=" + templateName + "]", e);
             }
