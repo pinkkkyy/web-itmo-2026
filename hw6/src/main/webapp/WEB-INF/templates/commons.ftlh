@@ -6,17 +6,20 @@
 <head>
     <meta charset="UTF-8">
     <title>Codeforces</title>
-    <link rel="stylesheet" type="text/css" href="css/normalize.css">
-    <link rel="stylesheet" type="text/css" href="css/style.css">
-    <link rel="stylesheet" type="text/css" href="css/form.css">
-    <link rel="stylesheet" type="text/css" href="css/datatable.css">
+    <link rel="stylesheet" type="text/css" href="/css/normalize.css">
+    <link rel="stylesheet" type="text/css" href="/css/style.css">
+    <link rel="stylesheet" type="text/css" href="/css/form.css">
+    <link rel="stylesheet" type="text/css" href="/css/datatable.css">
+    <script src="/js/jquery-3.6.1.min.js"></script>
+    <script src="/js/notify.min.js"></script>
+    <script src="/js/app.js"></script>
 </head>
 <body>
 <header>
-    <a href="/index"><img src="img/logo.png" alt="Codeforces" title="Codeforces"/></a>
+    <a href="/index"><img src="/img/logo.png" alt="Codeforces" title="Codeforces"/></a>
     <div class="languages">
-        <a href="#"><img src="img/gb.png" alt="In English" title="In English"/></a>
-        <a href="#"><img src="img/ru.png" alt="In Russian" title="In Russian"/></a>
+        <a href="#"><img src="/img/gb.png" alt="In English" title="In English"/></a>
+        <a href="#"><img src="/img/ru.png" alt="In Russian" title="In Russian"/></a>
     </div>
     <div class="enter-or-register-box">
         <#if user??>
@@ -36,9 +39,6 @@
         </ul>
     </nav>
 </header>
-<#if message??>
-    <div class="message">${message}</div>
-</#if>
 <div class="middle">
     <aside>
         <section>
@@ -59,8 +59,15 @@
     </main>
 </div>
 <footer>
-    <a href="/index">Codeforces</a> &copy; 2022 by Mike Mirzayanov
+    <a href="/index">Codeforces</a> &copy; by Mike Mirzayanov
 </footer>
+<#if message??>
+<script>
+    $(function () {
+        notify("${message?js_string}");
+    });
+</script>
+</#if>
 </body>
 </html>
 </#macro>

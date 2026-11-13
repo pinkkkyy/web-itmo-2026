@@ -44,22 +44,27 @@ public class UserService {
         userRepository.save(user, getPasswordSha(password));
     }
 
-    private String getPasswordSha(String password) {
-        return Hashing.sha256().hashBytes((PASSWORD_SALT + password).getBytes(StandardCharsets.UTF_8)).toString();
-    }
-
-    public List<User> findAll() {
-        return userRepository.findAll();
-    }
-
     public void validateEnter(String login, String password) throws ValidationException {
-        User user = userRepository.findByLoginAndPasswordSha(login, getPasswordSha(password));
-        if (user == null) {
+        if (Strings.isNullOrEmpty(login)) {
+            throw new ValidationException("Login is required");
+        }
+        if (Strings.isNullOrEmpty(password)) {
+            throw new ValidationException("Password is required");
+        }
+        if (findByLoginAndPassword(login, password) == null) {
             throw new ValidationException("Invalid login or password");
         }
     }
 
     public User findByLoginAndPassword(String login, String password) {
         return userRepository.findByLoginAndPasswordSha(login, getPasswordSha(password));
+    }
+
+    public List<User> findAll() {
+        return userRepository.findAll();
+    }
+
+    private String getPasswordSha(String password) {
+        return Hashing.sha256().hashBytes((PASSWORD_SALT + password).getBytes(StandardCharsets.UTF_8)).toString();
     }
 }

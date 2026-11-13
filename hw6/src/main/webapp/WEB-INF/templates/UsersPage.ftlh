@@ -2,7 +2,7 @@
 <#import "commons.ftlh" as c>
 
 <@c.page>
-    <div class="datatable">
+    <div class="users datatable">
         <div class="caption">User</div>
         <table>
             <thead>
@@ -13,12 +13,16 @@
             </tr>
             </thead>
             <tbody>
-            <#list users as user>
-            <tr>
-                <td>${user.id}</td>
-                <td>${user.login}</td>
-                <td>${user.creationTime}</td>
-            </tr>
+            <#list users as u>
+                <tr>
+                    <td>${u.id}</td>
+                    <td>${u.login}</td>
+                    <td>${u.creationTime?datetime}</td>
+                </tr>
+            <#else>
+                <tr class="noData">
+                    <td colspan="3">No data</td>
+                </tr>
             </#list>
             </tbody>
         </table>

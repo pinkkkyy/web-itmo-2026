@@ -22,9 +22,9 @@ public class EnterPage {
 
         userService.validateEnter(login, password);
         User user = userService.findByLoginAndPassword(login, password);
+
         request.getSession().setAttribute("user", user);
         request.getSession().setAttribute("message", "Hello, " + user.getLogin());
-
         throw new RedirectException("/index");
     }
 }
