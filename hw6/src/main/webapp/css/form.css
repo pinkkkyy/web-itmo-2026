@@ -48,3 +48,14 @@
     font-size: 0.75rem;
     margin-left: 12rem;
 }
+
+.form-box .field textarea,
+.form-box .field select {
+    width: 100%;
+    box-sizing: border-box;
+    font-family: inherit;
+}
+
+.form-box .field textarea {
+    resize: vertical;
+}

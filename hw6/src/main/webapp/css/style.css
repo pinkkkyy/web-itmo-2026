@@ -138,3 +138,75 @@ aside section .footer a:after {
     background-color: var(--message-background-color);
     text-align: center;
 }
+
+footer .user-count {
+    margin-top: 0.25rem;
+    font-size: 0.8rem;
+}
+
+.no-data {
+    text-align: center;
+    color: var(--border-color);
+    padding: 1rem;
+}
+
+article {
+    margin-bottom: 2rem;
+}
+
+article .title {
+    color: var(--caption-color);
+    font-size: 1.25rem;
+    font-weight: bold;
+}
+
+article .information {
+    margin-top: 0.25rem;
+    font-size: 0.75rem;
+    color: #888;
+}
+
+article .body {
+    margin-top: 0.75rem;
+    border-left: 4px solid var(--border-color);
+    padding-left: 0.75rem;
+    white-space: pre-wrap;
+    overflow-wrap: break-word;
+}
+
+article .footer {
+    margin-top: 0.75rem;
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    padding: 0.25rem 0.5rem;
+    overflow: hidden;
+    font-size: 0.8rem;
+}
+
+article .footer .left {
+    float: left;
+}
+
+article .footer .right {
+    float: right;
+}
+
+article .footer img {
+    vertical-align: middle;
+}
+
+article .footer .positive-score {
+    color: green;
+    font-weight: bold;
+}
+
+.talk-form {
+    margin-bottom: 2rem;
+}
+
+.talks .talk-text,
+.my-articles td:nth-child(2) {
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    text-align: left;
+}

@@ -1,5 +1,6 @@
 <#-- @ftlvariable name="user" type="ru.itmo.wp.model.domain.User" -->
 <#-- @ftlvariable name="message" type="java.lang.String" -->
+<#-- @ftlvariable name="userCount" type="java.lang.Long" -->
 <#macro page>
 <!DOCTYPE html>
 <html lang="en">
@@ -36,6 +37,11 @@
         <ul>
             <li><a href="/index">Home</a></li>
             <li><a href="/users">Users</a></li>
+            <#if user??>
+                <li><a href="/article">Article</a></li>
+                <li><a href="/myArticles">My articles</a></li>
+                <li><a href="/talks">Talks</a></li>
+            </#if>
         </ul>
     </nav>
 </header>
@@ -60,6 +66,7 @@
 </div>
 <footer>
     <a href="/index">Codeforces</a> &copy; by Mike Mirzayanov
+    <div class="user-count">Users: ${userCount!0}</div>
 </footer>
 <#if message??>
 <script>

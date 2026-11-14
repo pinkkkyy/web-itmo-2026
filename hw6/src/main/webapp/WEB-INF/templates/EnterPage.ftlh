@@ -1,5 +1,3 @@
-<#-- @ftlvariable name="login" type="java.lang.String" -->
-<#-- @ftlvariable name="error" type="java.lang.String" -->
 <#import "commons.ftlh" as c>
 
 <@c.page>
@@ -10,10 +8,10 @@
                 <input type="hidden" name="action" value="enter"/>
                 <div class="field">
                     <div class="name">
-                        <label for="login">Login</label>
+                        <label for="loginOrEmail">Login or email</label>
                     </div>
                     <div class="value">
-                        <input id="login" name="login" value="${login!}"/>
+                        <input id="loginOrEmail" name="loginOrEmail"/>
                     </div>
                 </div>
                 <div class="field">
@@ -24,13 +22,16 @@
                         <input id="password" name="password" type="password"/>
                     </div>
                 </div>
-                <#if error??>
-                    <div class="error">${error}</div>
-                </#if>
+                <div class="error"></div>
                 <div class="button-field">
                     <input type="submit" value="Enter">
                 </div>
             </form>
         </div>
     </div>
+    <script>
+        $(function () {
+            submitFormViaAjax($(".enter form"));
+        });
+    </script>
 </@c.page>

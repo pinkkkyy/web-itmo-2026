@@ -2,14 +2,15 @@ package ru.itmo.wp.web;
 
 import com.google.common.base.Strings;
 import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 import freemarker.template.*;
-import ru.itmo.wp.model.domain.User;
 import ru.itmo.wp.model.exception.ValidationException;
 import ru.itmo.wp.web.annotation.Json;
 import ru.itmo.wp.web.exception.NotFoundException;
 import ru.itmo.wp.web.exception.RedirectException;
 import ru.itmo.wp.web.page.IndexPage;
 import ru.itmo.wp.web.page.NotFoundPage;
+import ru.itmo.wp.web.page.Page;
 
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
@@ -19,6 +20,7 @@ import java.io.File;
 import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -29,6 +31,8 @@ public class FrontServlet extends HttpServlet {
             FrontServlet.class.getName().length() - FrontServlet.class.getSimpleName().length()) + "page";
 
     private static final String APPLICATION_JSON_MIME_TYPE = "application/json";
+
+    private static final Gson GSON = new GsonBuilder().setDateFormat("yyyy-MM-dd HH:mm:ss").create();
 
     private Configuration sourceFreemarkerConfiguration;
     private Configuration targetFreemarkerConfiguration;
@@ -127,6 +131,11 @@ public class FrontServlet extends HttpServlet {
             throw new NotFoundException();
         }
 
+        if (!Page.class.isAssignableFrom(pageClass) || Modifier.isAbstract(pageClass.getModifiers())
+                || "before".equals(route.getAction()) || "after".equals(route.getAction())) {
+            throw new NotFoundException();
+        }
+
         Method method = null;
         for (Class<?> clazz = pageClass; method == null && clazz != null; clazz = clazz.getSuperclass()) {
             try {
@@ -145,49 +154,53 @@ public class FrontServlet extends HttpServlet {
         boolean json = method.getAnnotation(Json.class) != null
                 || (acceptRequestHeader != null && acceptRequestHeader.startsWith(APPLICATION_JSON_MIME_TYPE));
 
-        Object page;
+        Page page;
         try {
-            //noinspection deprecation
-            page = pageClass.newInstance();
-        } catch (InstantiationException | IllegalAccessException e) {
+            page = (Page) pageClass.getDeclaredConstructor().newInstance();
+        } catch (ReflectiveOperationException e) {
             throw new ServletException("Can't create page [pageClass=" + pageClass + "].", e);
         }
 
         response.setCharacterEncoding(StandardCharsets.UTF_8.name());
         Map<String, Object> view = new HashMap<>();
-        putUser(request, view);
 
+        Throwable failure = null;
         try {
+            page.before(request, view);
             method.setAccessible(true);
             method.invoke(page, request, view);
         } catch (IllegalAccessException e) {
             throw new ServletException("Unable to run action [pageClass=" + pageClass + ", method=" + method + "].", e);
         } catch (InvocationTargetException e) {
-            Throwable cause = e.getCause();
-            if (cause instanceof RedirectException) {
-                RedirectException redirectException = (RedirectException) cause;
-                if (json) {
-                    view.put("redirect", redirectException.getLocation());
-                    writeJson(response, view);
-                } else {
-                    response.sendRedirect(redirectException.getLocation());
-                }
-                return;
-            } else if (cause instanceof ValidationException) {
-                ValidationException validationException = (ValidationException) cause;
+            failure = e.getCause();
+        } catch (RedirectException e) {
+            failure = e;
+        }
 
-                view.put("error", validationException.getMessage());
+        if (failure instanceof RedirectException) {
+            RedirectException redirectException = (RedirectException) failure;
+            if (json) {
+                view.put("redirect", redirectException.getLocation());
+                writeJson(response, view);
+            } else {
+                response.sendRedirect(redirectException.getLocation());
+            }
+            return;
+        } else if (failure instanceof ValidationException) {
+            view.put("error", failure.getMessage());
+            if (!json) {
                 for (Map.Entry<String, String[]> param : request.getParameterMap().entrySet()) {
                     String key = param.getKey();
                     if (param.getValue() != null && param.getValue().length == 1) {
-                        String value = param.getValue()[0];
-                        view.put(key, value);
+                        view.put(key, param.getValue()[0]);
                     }
                 }
-            } else {
-                throw new ServletException("Unable to run action [pageClass=" + pageClass + ", method=" + method + "].", e);
             }
+        } else if (failure != null) {
+            throw new ServletException("Unable to run action [pageClass=" + pageClass + ", method=" + method + "].", failure);
         }
+
+        page.after(request, view);
 
         if (json) {
             writeJson(response, view);
@@ -204,14 +217,7 @@ public class FrontServlet extends HttpServlet {
 
     private void writeJson(HttpServletResponse response, Map<String, Object> view) throws IOException {
         response.setContentType(APPLICATION_JSON_MIME_TYPE);
-        response.getWriter().print(new Gson().toJson(view));
-    }
-
-    private void putUser(HttpServletRequest request, Map<String, Object> view) {
-        User user = (User) request.getSession().getAttribute("user");
-        if (user != null) {
-            view.put("user", user);
-        }
+        response.getWriter().print(GSON.toJson(view));
     }
 
     private static final class Route {
